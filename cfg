@@ -1,0 +1,217 @@
+ import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+
+    # 在主函数或参数解析部分添加
+    #DSwin
+    parser.add_argument('--use_dswin', type=bool, default=True, help='是否使用DSWin注意力机制')
+
+    # 可以进一步细分控制
+    parser.add_argument('--dswin_kernel_sizes', type=str, default='3,5,7,9', help='DSWin的kernel sizes')
+    parser.add_argument('--dswin_dilations', type=str, default='1,2,1,2', help='DSWin的dilation rates')
+    parser.add_argument('--offset_range_factor', type=float, default=2.0, help='DSWin偏移范围因子')
+    # train
+    parser.add_argument(
+        '-gen_bs',
+        '--gen_batch_size',
+        type=int,
+        default=32,
+        help='size of the batches')
+    parser.add_argument(
+        '--max_epoch',
+        type=int,
+        default=100,
+        help='number of epochs of training')
+    parser.add_argument(
+        '--max_iter',
+        type=int,
+        default=None,
+        help='set the max iteration number')
+    parser.add_argument(
+        '--g_lr',
+        type=float,
+        help='adam: gen learning rate')
+ 
+    parser.add_argument(
+        '--lr_decay',
+        action='store_true',
+        help='learning rate decay or not')
+    parser.add_argument(
+        '--beta1',
+        type=float,
+        default=0.9,
+        help='adam: decay of first order momentum of gradient')
+    parser.add_argument(
+        '--beta2',
+        type=float,
+        default=0.999,
+        help='adam: decay of first order momentum of gradient')
+    parser.add_argument(
+        '--num_workers',
+        type=int,
+        default=1,
+        help='number of cpu threads to use during batch generation')
+    parser.add_argument(
+        '--val_freq',
+        type=int,
+        default=5,
+        help='interval between each validation')
+
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        default='coco',
+
+        help='dataset type')
+    parser.add_argument(
+        '--data_path',
+        type=str,
+        default=r'dataset/coco/train2017',
+   
+        help='The path of data set')
+    parser.add_argument('--init_type', type=str, default='xavier_uniform',
+                        choices=['normal', 'orth', 'xavier_uniform', 'false'],
+                        help='The init type')
+    parser.add_argument('--optimizer', type=str, default="adam",
+                        help='optimizer')
+    parser.add_argument('--rec_w', type=int, default=1, help='penalty for the reconstruction loss')
+    parser.add_argument('--rec_loss_type', type=str, default='l2', help='The type of reconstruction loss')
+    parser.add_argument('--weight_decay', type=float, default=1.5e-3, help='penalty for the adam')
+    parser.add_argument('--lr_multi', type=int, default=None)
+    parser.add_argument('--train_patch_size',type=int,default=128,help='size of training input in dataloader')
+    parser.add_argument('--random_seed', type=int, default=3407)
+
+    parser.add_argument('--accumulation_steps', type=int, default=2,
+                        help='number of gradient accumulation steps')
+    parser.add_argument('--max_grad_norm', type=float, default=1.0,#default=0.5,
+                        help='gradient clipping norm')
+    # ========== 新增自适应损失参数 ==========
+    # TV损失自适应权重
+    parser.add_argument('--tv_w', type=float, default=0.01,
+                        help='initial weight for total variation loss')
+
+    parser.add_argument('--tv_decay_type', type=str, default='exponential',
+                        choices=['exponential', 'linear', 'cosine'],
+                        help='TV weight decay schedule')
+    parser.add_argument('--tv_decay_epochs', type=int, default=60,
+                        help='epochs to decay TV weight')
+
+    # 感知损失自适应权重
+    parser.add_argument('--perceptual_w', type=float, default=0.1,
+                        help='initial weight for perceptual loss')
+    # parser.add_argument('--perceptual_warmup_epochs', type=int, default=20,
+    #                     help='epochs to warmup perceptual loss')
+
+    # 重建损失保持稳定
+    parser.add_argument('--rec_w_stable', type=float, default=1.0,
+                        help='stable weight for reconstruction loss')
+
+    # 自适应权重调整策略
+    parser.add_argument('--adaptive_loss', type=bool, default=True,
+                        help='use adaptive loss weighting')
+    parser.add_argument('--loss_balance_freq', type=int, default=10,
+                        help='frequency to rebalance loss weights')
+
+
+    # setting
+    parser.add_argument(
+        '--exp_name',
+        type=str,
+        #default='div2k_cs25',
+        default='test25',
+        help='The name of exp')
+    parser.add_argument(
+        '--log_path',
+        default=r'../logs',
+        type=str,
+        help='The tensorboard path')
+    parser.add_argument(
+        '--load_path',
+        default='../logs/25/Model/checkpoint_best.pth',
+        type=str,
+        help='The reload model path')
+    parser.add_argument('--cs_ratio', type=int, default=25, help='from {1, 4, 10, 25, 40, 50}')
+    parser.add_argument('--datarange', type=str, default='-11',
+                        help='input data norm to range')
+    parser.add_argument('--torch_vision', action='store_true', default=True, help='Show intermediate results in tensorbard dir')
+    parser.add_argument(
+        '--print_freq',
+        type=int,
+        default=50,
+        help='interval between each verbose')
+
+    #test
+    parser.add_argument(
+        '--testdata_path',
+        type=str,
+        #default=[r'../dataset/Set14'],
+        #default=[r'../dataset/LIVE29'],
+        #default=[r'./dataset/Urban100', r'./dataset/Set11', r'./dataset/OST300', r'./dataset/General100'],
+        default=[r'../dataset/Urban100'],
+        #default=[r'../dataset/Set11'],
+        #default=[r'../dataset/OST300'],
+         #default=[r'../dataset/General100'],
+        help='The path of data set')
+    parser.add_argument(
+        '--test_path',
+        type=str,
+        default=r'logs/testlog',
+        help='The path of data set')
+    parser.add_argument(
+        '--test_mode',
+        type=str,
+        default='single',
+        help='The test mode')
+    parser.add_argument(
+        '--valdata_path',
+        type=str,
+        default='dataset/Set11',
+        help='The path of val set')
+    parser.add_argument('--eval_batch_size', type=int, default=4)
+    parser.add_argument('--overlap', default=False,action='store_true',help='overlap or not during testing')
+    parser.add_argument('--overlapstep',type=int,default=8,help='the overlap step for testing')
+
+    #model
+    parser.add_argument(
+        '--gen_model',
+        type=str,
+        default='CT-MSA ',
+        help='path of gen model')
+    parser.add_argument(
+        '--bottom_width',
+        type=int,
+        default=8)
+    parser.add_argument(
+        '--img_size',
+        type=int,
+        default=64,
+        help='output size')
+    parser.add_argument('--gf_dim', type=int, default=128,
+                        help='The base channel num of model')
+
+    parser.add_argument('--g_depth', type=str, default="3,3,3,3",
+                        help='Generator Depth')
+    parser.add_argument('--g_window_size', type=int, default=8,
+                        help='generator mlp ratio')
+    parser.add_argument('--num_heads', type=str, default="8,4,2,1",
+                        help='num_head of transformer')
+    parser.add_argument('--cnnnorm_type', type=str, default="BatchNorm",
+                        help='norm type of cnn')
+    parser.add_argument('--g_norm', type=str, default="ln",
+                        help='Generator Normalization')
+    parser.add_argument('--g_mlp', type=int, default=4,
+                        help='generator mlp ratio')
+    parser.add_argument('--g_act', type=str, default="gelu",
+                        help='Generator activation Layer')
+    parser.add_argument('--pretrained', type=str, default="church",
+                        help='pretrained dataset')
+    parser.add_argument('--seed', default=3407, type=int,
+                        help='seed for initializing training. ')
+
+
+    opt = parser.parse_args()
+
+    return opt
