@@ -117,7 +117,7 @@ class Attention(nn.Module):
             torch.zeros((2 * window_size - 1) * (2 * window_size - 1), num_heads))  # 2*Wh-1 * 2*Ww-1, nH
 
         # 计算相对位置索引
-        #生成窗口内每个位置的坐标，coords_h 和 coords_w 是分别对应窗口的高度和宽度。使用 meshgrid 生成坐标网格。
+
         # get pair-wise relative position index for each token inside the window
         coords_h = torch.arange(window_size)
         coords_w = torch.arange(window_size)
@@ -329,11 +329,8 @@ class MakeDense(nn.Module):
         return out
 
 
-# --- Build the Residual Dense Block --- #
-# 这是一个残差密集 Transformer 块,主要特点:
-# 串联多个 MakeDense 层
-# 最后有 1x1 卷积和归一化
-# 加入残差连接
+
+
 class RDTB(nn.Module):
     def __init__(self, num_dense_layer,in_channels,growth_rate, num_heads,mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0., drop_path=0., act_layer=leakyrelu, norm_layer=nn.LayerNorm, window_size=16):
         """
